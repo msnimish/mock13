@@ -17,12 +17,14 @@ export const register = async (req,res) => {
             return res.status(400).json({message:"User already exists"});
         }else{
             let hashedPassword= await bcrypt.hash(password,10);
-
             let newUser = new User({
                 name,
                 email,
-                password: hashedPassword
+                password: hashedPassword, 
             });
+            if(email.includes("@masaischool.com")){
+                newUser.role = "admin"
+            }
             newUser.save();
             return res.status(201).json(newUser);
         }
@@ -39,10 +41,11 @@ export const login = async (req,res) => {
         if(!user){
             res.status(400).json({message:"User not found"});
         }else{
-            if(user.password!== password){
-                res.status(400).json({message:"Wrong password"});
+            let isMatch = await bcrypt.compare(password,user.password);
+            if(!isMatch){
+                res.status(400).json({message:"Invalid password"});
             }else{
-                let token = jwt.sign({_id: user._id, name: user.name, email:user.email, password: user.password},process.env.JWT_SECRET,{expiresIn:"1h"});
+                let token = jwt.sign({_id: user._id, name: user.name, email:user.email, password: user.password, role:user.role},process.env.JWT_SECRET,{expiresIn:"1h"});
                 res.status(200).json({token});
             }
         }
@@ -78,26 +81,5 @@ export const getProfile = async (req,res) => {
     }catch(err){
         console.log(err)
         res.status(500).send({message:"Something went wrong in getProfile API"});
-    }
-}
-
-export const calculate = async(req,res) => {
-    try{
-        let token = req.headers.authorization.split(" ")[1];
-        let decoded = jwt.verify(token,process.env.JWT_SECRET);
-        // console.log(decoded)
-        let data = await User.findById(decoded._id);
-        data.interestRate = req.body.interestRate;
-        data.installmentAmt = req.body.installmentAmt;
-        data.years = req.body.years;
-        data.interestRate = data.interestRate/100;
-        data.maturityValue = data.installmentAmt*((((1+data.interestRate)**data.years)-1)/data.interestRate);
-        data.investmentAmt = data.installmentAmt*data.years;
-        data.interestAmt = data.maturityValue-data.investmentAmt;
-        await data.save();
-        res.status(200).send(data);
-    }catch(err){
-        console.log(err);
-        res.status(500).send({message:"Something went wrong in calculate API"});
     }
 }
