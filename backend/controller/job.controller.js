@@ -3,7 +3,7 @@ import User from "../model/user.model.js";
 
 export const getAlljobs = async (req, res) => {
     try{
-        let jobs = await Job.find()
+        let jobs = await Job.find().limit(20);
         res.status(200).send({jobs})
     }catch(err){
         console.log(err);
@@ -45,6 +45,21 @@ export const getAllJobsOfUser = async (req, res) => {
     }catch(err){
         console.log(err);
         res.status(500).send({message: err.message});
+    }
+}
+
+export const deleteJobs = async (req, res) => {
+    try{
+        let jobs = await Job.find();
+        for(let i=0;i<jobs.length;i++){
+            if(i<100){
+                await Job.findByIdAndDelete(jobs[i]._id);
+            }
+        }
+        res.send({message: "jobs deleted"})
+    }catch(err){
+        console.log(err);
+        res.status(500).send({message: err.message})
     }
 }
 
